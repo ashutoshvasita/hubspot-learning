@@ -1,0 +1,10 @@
+﹣ Day 1 setup (0.406425ms) # no HUBSPOT_TOKEN in requests/.env (see docs/02-setup.md)
+﹣ Day 2 basic CRUD (0.396163ms) # no HUBSPOT_TOKEN in requests/.env (see docs/02-setup.md)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 71.119446

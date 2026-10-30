@@ -1,0 +1,70 @@
+# Day 2: Basic CRUD on one contact (workbook rows 7 to 12, TL steps 3 to 8)
+# Send the requests in order: later ones reuse the id returned by "createContact".
+# Before EVERY request: write your guessed status code in notes/day02.md, then send.
+# After each request, open the contact in the HubSpot UI and look at what changed.
+# Running the day again? Change @email (e.g. -2, -3) or step 7 will give 409.
+
+@baseUrl = https://api.hubapi.com
+@token = {{$dotenv HUBSPOT_TOKEN}}
+@email = hslearn+d02-1@example.com
+@contactId = {{createContact.response.body.id}}
+
+### Row 7: Create one contact. Guess: 200 or 201? Save the returned id.
+# @name createContact
+POST {{baseUrl}}/crm/v3/objects/contacts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "properties": {
+    "email": "{{email}}",
+    "firstname": "Test",
+    "lastname": "Tester HSLearn"
+  }
+}
+
+### Row 8: Read by id and ask for specific properties
+# Which properties come back? Try removing ?properties=... and compare.
+GET {{baseUrl}}/crm/v3/objects/contacts/{{contactId}}?properties=email,firstname,phone
+Authorization: Bearer {{token}}
+
+### Row 9: Read by email instead of id
+# idProperty=email tells HubSpot the path value is an email, not an id
+GET {{baseUrl}}/crm/v3/objects/contacts/{{email}}?idProperty=email
+Authorization: Bearer {{token}}
+
+### Row 10: Update the contact. Only the fields you send change.
+PATCH {{baseUrl}}/crm/v3/objects/contacts/{{contactId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "properties": {
+    "firstname": "Updated",
+    "phone": "+91 98765 43210"
+  }
+}
+
+### Row 11: Create the same email again. Guess the code before sending!
+# Read the message: where is the existing id?
+POST {{baseUrl}}/crm/v3/objects/contacts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "properties": {
+    "email": "{{email}}"
+  }
+}
+
+### Row 12: Archive the contact. Is there a response body?
+DELETE {{baseUrl}}/crm/v3/objects/contacts/{{contactId}}
+Authorization: Bearer {{token}}
+
+### Experiment: read it again after archiving. What code now?
+GET {{baseUrl}}/crm/v3/objects/contacts/{{contactId}}
+Authorization: Bearer {{token}}
+
+### Stretch: list archived contacts (the recycle bin)
+GET {{baseUrl}}/crm/v3/objects/contacts?archived=true&limit=5
+Authorization: Bearer {{token}}

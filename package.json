@@ -1,0 +1,19 @@
+{
+  "name": "hubspot-learning",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Learning the HubSpot CRM REST API step by step, following the TL checklist",
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/test.js offline",
+    "test:live": "node scripts/test.js live",
+    "test:all": "node scripts/test.js all",
+    "docs": "node scripts/serve-docs.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
+  }
+}
