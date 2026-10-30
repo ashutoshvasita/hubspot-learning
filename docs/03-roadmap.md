@@ -40,7 +40,7 @@ Files: `requests/01-setup.http`, `notes/day01.md`, `tests/live/day01-setup.test.
 | 2 | New | UI tour: create 1 contact and 1 company by hand, link them, open Settings > Properties | (UI) | You know what a record, property and association look like before the API |
 | 3 | New | Developer account + Developer Test Account | (UI) developers.hubspot.com | Test account opens; note its Hub ID |
 | 4 | New | Install REST Client (or Postman), `npm install` | (tool) | `requests/.env` holds the token |
-| 5 | 1 | Private app with all 8 scopes, **inside the test account** | (UI) Settings > Integrations > Private apps / Legacy apps | Token copied into `requests/.env` |
+| 5 | 1 | Service key (or legacy private app) with all 8 scopes, **inside the test account** | (UI) Development > Legacy Apps > Create a service key | Key copied into `requests/.env` |
 | 6 | 2 | Check the token works | `GET /crm/v3/objects/contacts?limit=1` | 200 OK; 401 = bad token; 403 = missing scope |
 |  |  | Extra: who am I | `GET /account-info/v3/details` | `portalId` = your Hub ID |
 |  |  | Extra: scope check | `GET /crm/v3/objects/companies?limit=1`, `GET /crm/v3/properties/contacts/groups` | 200 each; 403 means a scope is missing |

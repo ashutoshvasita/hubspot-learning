@@ -10,7 +10,7 @@ hard to clean up). This page is the setup that avoids those problems.
 |---|---|---|
 | 1 | **Create the private app inside the Developer Test Account**, not inside the developer account itself | A developer account has no CRM data. A token made there cannot create contacts. The test account has Enterprise features, which you need for association labels (steps 55 to 66). |
 | 2 | **Add all 8 scopes now**, not only contacts | Steps 13 to 22 (custom properties) need `crm.schemas.*`, steps 45+ need companies. Adding scopes later means updating the app and sometimes copying a new token. |
-| 3 | Look for **"Legacy apps"** if you can't find "Private apps" | HubSpot renamed the menu in 2025. Same thing, new name. |
+| 3 | Use a **service key** if the account says "Legacy apps aren't available" | HubSpot replaced private apps (later called "Legacy apps") with service keys. For this course a service key works the same way: a token with scopes, sent as `Authorization: Bearer <key>`. |
 | 4 | Use the **VS Code REST Client** extension as the main tool; Postman is optional | Requests live as `.http` files in this git repo, so your whole learning history is versioned. Postman can still import `api/openapi.yaml` if you prefer it. |
 | 5 | Token goes **only** in `requests/.env` | Git ignores it, and the pre-commit hook blocks any `pat-...` token. |
 | 6 | **Name all test data with a marker** | Makes step 69 (cleanup) one search instead of hunting records by hand. See "Test data naming" below. |
@@ -32,10 +32,17 @@ hard to clean up). This page is the setup that avoids those problems.
    ```
 3. Optional: Postman. Create an environment with `base_url = https://api.hubapi.com` and `token = <your token>`, or import `api/openapi.yaml` as a collection.
 
-### 5. Private app (inside the TEST account)
-1. In the test account: **Settings (gear) > Integrations > Private apps** (or **Development > Legacy apps**).
-2. Create a private app named `hs-learning`.
-3. Scopes tab, add all of these:
+### 5. Service key or private app (inside the TEST account)
+
+First make sure you are in the test account: the top right shows the test account
+name, and there is no "Upgrade to Starter" button (a test account has Enterprise features).
+Never create the key in your company's real portal.
+
+1. In the test account: **Development > Legacy Apps**.
+   - If it says "Legacy apps aren't available on this account": click **Create a service key** (current HubSpot).
+   - Otherwise: **Create legacy app** (older accounts; also under Settings > Integrations > Private apps).
+2. Name it `hs-learning`.
+3. Add all of these scopes:
 
    | Scope | Needed for |
    |---|---|
@@ -44,8 +51,8 @@ hard to clean up). This page is the setup that avoids those problems.
    | `crm.schemas.contacts.read` / `.write` | Custom properties (13 to 22), association labels |
    | `crm.schemas.companies.read` / `.write` | Company properties, association labels |
 
-4. Create the app, open the **Auth** tab, copy the access token.
-5. Create `requests/.env` (copy `requests/.env.example`) and paste:
+4. Create it and copy the key / access token (for a legacy app: the **Auth** tab).
+5. Create `requests/.env` (copy `requests/.env.example`; never edit `.env.example` itself, git tracks it) and paste:
    ```
    HUBSPOT_TOKEN=pat-na1-xxxxxxxx-xxxx-...
    ```

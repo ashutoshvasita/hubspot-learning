@@ -84,6 +84,7 @@ The proxy only listens on localhost. Postman users can import `api/openapi.yaml`
 
 | Date | Change |
 |---|---|
+| 2026-10-30 | Setup guide: HubSpot replaced legacy/private apps with service keys; check you are in the test account |
 | 2026-10-30 | Swagger docs server uses the token from `requests/.env` automatically |
 | 2026-10-30 | Offline test: every API row of the workbook must be covered by Swagger `x-plan-steps` |
 | 2026-10-30 | Added learning guide (concepts, setup changes, 14-day roadmap), OpenAPI spec + Swagger UI, test runner with saved reports, offline sync tests, Day 1 and Day 2 lessons with live tests |
