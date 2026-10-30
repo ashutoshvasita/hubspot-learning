@@ -1,0 +1,20 @@
+# Lesson 1: Setup (TL steps 1 and 2)
+# How to run: install the VS Code extension "REST Client" (by Huachao Mao),
+# then click the small "Send Request" link that appears above each request.
+
+@baseUrl = https://api.hubapi.com
+@token = {{$dotenv HUBSPOT_TOKEN}}
+
+### Step 2: Check the token works
+# Before sending, guess: what status code will you get?
+# 200 = token works, 401 = token wrong, 403 = token valid but missing scope
+GET {{baseUrl}}/crm/v3/objects/contacts?limit=1
+Authorization: Bearer {{token}}
+
+### Extra: account details (shows your Hub ID / portal id)
+GET {{baseUrl}}/account-info/v3/details
+Authorization: Bearer {{token}}
+
+### Experiment: send a wrong token on purpose and read the error
+GET {{baseUrl}}/crm/v3/objects/contacts?limit=1
+Authorization: Bearer wrong-token-123
