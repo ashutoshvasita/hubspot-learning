@@ -7,10 +7,12 @@ info:
     `x-plan-steps` on each operation lists the workbook step numbers (# column) that use it;
     see `docs/03-roadmap.md`.
 
-    **How to use "Try it out":** run `npm run docs`, open http://localhost:4000, click
-    **Authorize** and paste your token (without the word Bearer). Keep the server
-    "local proxy" selected: HubSpot blocks direct browser calls (CORS), so the local
-    docs server forwards requests to https://api.hubapi.com for you.
+    **How to use "Try it out":** put your token in `requests/.env` (docs/02-setup.md),
+    run `npm run docs`, open http://localhost:4000. Keep the server "local proxy" selected:
+    HubSpot blocks direct browser calls (CORS), so the local docs server forwards requests
+    to https://api.hubapi.com and adds the token from `requests/.env` for you.
+    **Authorize** is optional; a token pasted there is used instead.
+    401 with "Authentication credentials not found" = no token was sent at all.
 
     This is a hand-written learning reference, not HubSpot's official spec. Official docs:
     https://developers.hubspot.com/docs/api-reference

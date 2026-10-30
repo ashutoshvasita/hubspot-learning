@@ -5,6 +5,7 @@
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { token } from '../tests/lib/hubspot.js';
 
 const PORT = Number(process.env.PORT) || 4000;
 const ROOT = new URL('..', import.meta.url);
@@ -23,8 +24,10 @@ async function readBody(req) {
 
 async function proxy(req, res) {
   const target = HUBSPOT + req.url.slice('/hubspot'.length);
+  // A token from Swagger's Authorize button wins; otherwise use the one in requests/.env
   const headers = {};
-  if (req.headers.authorization) headers.authorization = req.headers.authorization;
+  const auth = req.headers.authorization ?? (token && `Bearer ${token}`);
+  if (auth) headers.authorization = auth;
   if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
 
   const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req);
@@ -61,4 +64,7 @@ const server = createServer(async (req, res) => {
 // Bind to localhost only: the proxy forwards your token, so it must not be reachable from the network
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`Swagger UI: http://localhost:${PORT}  (Ctrl+C to stop)`);
+  console.log(token
+    ? 'Token: using requests/.env (Authorize in Swagger is optional)'
+    : 'Token: none in requests/.env, so click Authorize in Swagger or every call returns 401');
 });

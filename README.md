@@ -66,8 +66,9 @@ Every run is saved in `test-results/` and logged in `test-results/HISTORY.md`. C
 
 ## Swagger
 
-`npm run docs`, open http://localhost:4000, click **Authorize**, paste the token (without
-the word Bearer). Without this step every call returns 401. Keep the
+`npm run docs`, open http://localhost:4000. The docs server adds the token from
+`requests/.env` automatically (clicking **Authorize** and pasting a token overrides it).
+With no token in either place every call returns 401. Keep the
 "Local proxy" server selected so **Try it out** works (HubSpot blocks direct browser calls).
 The proxy only listens on localhost. Postman users can import `api/openapi.yaml` directly.
 
@@ -83,6 +84,7 @@ The proxy only listens on localhost. Postman users can import `api/openapi.yaml`
 
 | Date | Change |
 |---|---|
+| 2026-10-30 | Swagger docs server uses the token from `requests/.env` automatically |
 | 2026-10-30 | Offline test: every API row of the workbook must be covered by Swagger `x-plan-steps` |
 | 2026-10-30 | Added learning guide (concepts, setup changes, 14-day roadmap), OpenAPI spec + Swagger UI, test runner with saved reports, offline sync tests, Day 1 and Day 2 lessons with live tests |
 | 2026-10-30 | Secret protection: stricter `.gitignore`, pre-commit token check |

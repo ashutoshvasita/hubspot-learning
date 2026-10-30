@@ -1,16 +1,16 @@
-✔ spec is OpenAPI 3 with info, servers and bearer auth (0.639955ms)
-✔ every $ref points to something that exists (1.249376ms)
-✔ every operation has a unique operationId, summary, known tag, responses and plan steps (0.320022ms)
-✔ every API row of the workbook (1 to 70) is covered by some x-plan-steps (0.120398ms)
-✔ every {param} in a path is declared as a path parameter (0.388665ms)
-✔ there is at least one lesson request file (0.568785ms)
-✔ requests/01-setup.http: every request is documented in api/openapi.yaml (0.970867ms)
-✔ requests/01-setup.http: never contains a real token (0.227012ms)
-✔ requests/02-crud.http: every request is documented in api/openapi.yaml (0.16278ms)
-✔ requests/02-crud.http: never contains a real token (0.139156ms)
-✔ docs/03-roadmap.md: every endpoint is documented in api/openapi.yaml (1.514273ms)
-✔ README.md links every request file, live test, doc and note (0.292922ms)
-✔ every lesson request file has a matching live test (0.183918ms)
+✔ spec is OpenAPI 3 with info, servers and bearer auth (0.636725ms)
+✔ every $ref points to something that exists (1.283679ms)
+✔ every operation has a unique operationId, summary, known tag, responses and plan steps (0.35699ms)
+✔ every API row of the workbook (1 to 70) is covered by some x-plan-steps (0.12724ms)
+✔ every {param} in a path is declared as a path parameter (0.392549ms)
+✔ there is at least one lesson request file (0.783156ms)
+✔ requests/01-setup.http: every request is documented in api/openapi.yaml (1.350615ms)
+✔ requests/01-setup.http: never contains a real token (0.319974ms)
+✔ requests/02-crud.http: every request is documented in api/openapi.yaml (0.198446ms)
+✔ requests/02-crud.http: never contains a real token (0.178934ms)
+✔ docs/03-roadmap.md: every endpoint is documented in api/openapi.yaml (2.620431ms)
+✔ README.md links every request file, live test, doc and note (0.704023ms)
+✔ every lesson request file has a matching live test (0.345693ms)
 ℹ tests 13
 ℹ suites 0
 ℹ pass 13
@@ -18,4 +18,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 207.750217
+ℹ duration_ms 211.635213
