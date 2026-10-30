@@ -25,4 +25,9 @@
 - Guessed status code: 
 - Actual status code: 
 - Wrong token status code: 
+- Scope checks (companies, contact properties, company properties): 
+- `npm run test:live` result (Day 1 tests): 
 - One thing I learned:
+
+## Checkpoint
+- What do 401 and 403 mean, and how would you fix each?

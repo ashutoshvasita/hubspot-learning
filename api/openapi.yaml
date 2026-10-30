@@ -1,0 +1,1334 @@
+openapi: 3.0.3
+info:
+  title: HubSpot CRM API (learning subset)
+  version: 1.0.0
+  description: |
+    Every HubSpot endpoint used in this learning plan, in one place.
+    `x-plan-steps` on each operation lists the workbook step numbers (# column) that use it;
+    see `docs/03-roadmap.md`.
+
+    **How to use "Try it out":** run `npm run docs`, open http://localhost:4000, click
+    **Authorize** and paste your token (without the word Bearer). Keep the server
+    "local proxy" selected: HubSpot blocks direct browser calls (CORS), so the local
+    docs server forwards requests to https://api.hubapi.com for you.
+
+    This is a hand-written learning reference, not HubSpot's official spec. Official docs:
+    https://developers.hubspot.com/docs/api-reference
+servers:
+  - url: http://localhost:4000/hubspot
+    description: Local proxy (npm run docs), needed for Try it out
+  - url: https://api.hubapi.com
+    description: HubSpot API (use from REST Client, Postman, Node)
+security:
+  - bearerAuth: []
+tags:
+  - name: Account
+    description: Setup checks (Day 1)
+  - name: Contacts
+    description: Single record CRUD (Days 2, 5, 9, 10)
+  - name: Contacts search
+    description: Filter, sort, page (Days 6, 7, 12, 14)
+  - name: Contacts batch
+    description: Up to 100 records per call (Days 8, 10, 13, 14)
+  - name: Companies
+    description: Company records (Days 9, 10, 14)
+  - name: Properties
+    description: Custom properties / schema (Days 3, 4)
+  - name: Associations
+    description: Links between records, v4 API (Days 9, 10, 11, 12)
+  - name: Association labels
+    description: Named roles for links, paid tiers only (Days 11, 12)
+
+paths:
+  # ---------------------------------------------------------------- Account
+  /account-info/v3/details:
+    get:
+      tags: [Account]
+      operationId: getAccountDetails
+      summary: Account details (Hub ID, time zone, data center)
+      x-plan-steps: [6]
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portalId: { type: integer, example: 12345678 }
+                  accountType: { type: string, example: DEVELOPER_TEST }
+                  timeZone: { type: string, example: Asia/Kolkata }
+                  companyCurrency: { type: string, example: USD }
+                  uiDomain: { type: string, example: app.hubspot.com }
+                  dataHostingLocation: { type: string, example: na1 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Contacts
+  /crm/v3/objects/contacts:
+    get:
+      tags: [Contacts]
+      operationId: listContacts
+      summary: List contacts (one page)
+      description: Used as the "does my token work" check. Page with `after`.
+      x-plan-steps: [6, 12]
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/properties'
+        - $ref: '#/components/parameters/associations'
+        - $ref: '#/components/parameters/archived'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    post:
+      tags: [Contacts]
+      operationId: createContact
+      summary: Create a contact (optionally with associations)
+      description: |
+        Returns 409 if the email already exists; the message contains `Existing ID: <id>`.
+        Property values are always strings in responses.
+      x-plan-steps: [7, 11, 23, 24, 25, 26, 27, 28, 37, 45, 52]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateInput' }
+            examples:
+              simple:
+                summary: Step 7, simple contact
+                value:
+                  properties:
+                    email: hslearn+d02-1@example.com
+                    firstname: Test
+                    lastname: Tester HSLearn
+              valuesByType:
+                summary: Steps 23 to 27, one value of each type
+                value:
+                  properties:
+                    email: hslearn+d05-1@example.com
+                    hsl_nickname: Tester
+                    hsl_score: '42'
+                    hsl_favorite_color: blue
+                    hsl_interests: api;crm;sales
+                    hsl_newsletter: 'true'
+                    joining_date: '2026-10-30'
+                    hsl_last_call: '2026-10-30T10:30:00Z'
+              withAssociation:
+                summary: Step 52, create already linked to a company
+                value:
+                  properties:
+                    email: hslearn+d10-1@example.com
+                  associations:
+                    - to: { id: '900' }
+                      types:
+                        - associationCategory: HUBSPOT_DEFINED
+                          associationTypeId: 279
+      responses:
+        '201': { $ref: '#/components/responses/Object' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /crm/v3/objects/contacts/{contactId}:
+    parameters:
+      - $ref: '#/components/parameters/contactId'
+    get:
+      tags: [Contacts]
+      operationId: getContact
+      summary: Read a contact by id (or by email with idProperty=email)
+      x-plan-steps: [8, 9, 50]
+      parameters:
+        - $ref: '#/components/parameters/properties'
+        - $ref: '#/components/parameters/associations'
+        - $ref: '#/components/parameters/idProperty'
+        - $ref: '#/components/parameters/archived'
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Contacts]
+      operationId: updateContact
+      summary: Update a contact (only the sent properties change)
+      description: Send `""` to clear a value (step 29).
+      x-plan-steps: [10, 29]
+      parameters:
+        - $ref: '#/components/parameters/idProperty'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertiesInput' }
+            examples:
+              update:
+                summary: Step 10
+                value: { properties: { firstname: Updated, phone: '+91 98765 43210' } }
+              clear:
+                summary: Step 29, clear a value
+                value: { properties: { phone: '' } }
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Contacts]
+      operationId: archiveContact
+      summary: Archive (delete) a contact
+      description: Record goes to the recycle bin for 90 days.
+      x-plan-steps: [12]
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Search
+  /crm/v3/objects/contacts/search:
+    post:
+      tags: [Contacts search]
+      operationId: searchContacts
+      summary: Search contacts with filters, sorts and paging
+      description: |
+        Filters inside one group are AND; separate groups are OR.
+        Max 5 groups, 6 filters per group, 18 filters total; `limit` max 200; 10,000 results cap.
+        Rate limit about 5 requests/second. Eventually consistent: new records may take a few seconds to appear.
+        Search contacts linked to a company with `propertyName: associations.company`.
+      x-plan-steps: [30, 31, 32, 33, 34, 35, 36, 37, 64, 69]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+            examples:
+              byEmail:
+                summary: Step 30, EQ
+                value:
+                  filterGroups:
+                    - filters: [{ propertyName: email, operator: EQ, value: hslearn+d06-1@example.com }]
+                  properties: [email, firstname, lastname]
+              partialName:
+                summary: Step 31, CONTAINS_TOKEN
+                value:
+                  filterGroups:
+                    - filters: [{ propertyName: lastname, operator: CONTAINS_TOKEN, value: HSLearn }]
+              severalEmails:
+                summary: Step 32, IN
+                value:
+                  filterGroups:
+                    - filters:
+                        - propertyName: email
+                          operator: IN
+                          values: [hslearn+d06-1@example.com, hslearn+d06-2@example.com]
+              andOr:
+                summary: Step 33, (A AND B) OR C
+                value:
+                  filterGroups:
+                    - filters:
+                        - { propertyName: lastname, operator: CONTAINS_TOKEN, value: HSLearn }
+                        - { propertyName: hsl_favorite_color, operator: EQ, value: blue }
+                    - filters:
+                        - { propertyName: email, operator: EQ, value: hslearn+d06-3@example.com }
+              dateAfter:
+                summary: Step 35, GT on a date
+                value:
+                  filterGroups:
+                    - filters: [{ propertyName: joining_date, operator: GT, value: '2026-01-01' }]
+              sortedPaged:
+                summary: Step 36, sort and page
+                value:
+                  filterGroups:
+                    - filters: [{ propertyName: lastname, operator: CONTAINS_TOKEN, value: HSLearn }]
+                  sorts: [{ propertyName: createdate, direction: DESCENDING }]
+                  limit: 5
+                  after: '5'
+              linkedToCompany:
+                summary: Step 64, contacts linked to a company
+                value:
+                  filterGroups:
+                    - filters: [{ propertyName: associations.company, operator: EQ, value: '900' }]
+              cleanup:
+                summary: Step 69, all practice contacts
+                value:
+                  filterGroups:
+                    - filters: [{ propertyName: hs_email_domain, operator: EQ, value: example.com }]
+                  limit: 100
+      responses:
+        '200': { $ref: '#/components/responses/SearchResults' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  # ---------------------------------------------------------------- Batch
+  /crm/v3/objects/contacts/batch/create:
+    post:
+      tags: [Contacts batch]
+      operationId: batchCreateContacts
+      summary: Create up to 100 contacts (optionally with associations)
+      description: 101 inputs gives 400 (step 43).
+      x-plan-steps: [38, 43, 53]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inputs]
+              properties:
+                inputs:
+                  type: array
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/CreateInput' }
+            example:
+              inputs:
+                - properties: { email: hslearn+d08-1@example.com, lastname: Batch HSLearn }
+                - properties: { email: hslearn+d08-2@example.com, lastname: Batch HSLearn }
+      responses:
+        '201': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /crm/v3/objects/contacts/batch/read:
+    post:
+      tags: [Contacts batch]
+      operationId: batchReadContacts
+      summary: Read up to 100 contacts by id or by email
+      description: Mix real and fake ids to see 207 Multi-Status with an `errors` array (step 68).
+      x-plan-steps: [39, 40, 68]
+      parameters:
+        - $ref: '#/components/parameters/archived'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inputs]
+              properties:
+                inputs:
+                  type: array
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/IdInput' }
+                properties: { type: array, items: { type: string } }
+                idProperty: { type: string, description: 'e.g. email' }
+            examples:
+              byId:
+                summary: Step 39
+                value: { inputs: [{ id: '101' }, { id: '102' }], properties: [email, lastname] }
+              byEmail:
+                summary: Step 40
+                value: { idProperty: email, inputs: [{ id: hslearn+d08-1@example.com }], properties: [email] }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v3/objects/contacts/batch/update:
+    post:
+      tags: [Contacts batch]
+      operationId: batchUpdateContacts
+      summary: Update up to 100 contacts by id
+      x-plan-steps: [41]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchUpdateInput' }
+            example:
+              inputs:
+                - { id: '101', properties: { firstname: Updated } }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v3/objects/contacts/batch/upsert:
+    post:
+      tags: [Contacts batch]
+      operationId: batchUpsertContacts
+      summary: Create or update up to 100 contacts, matched by a unique property (email)
+      x-plan-steps: [42, 70]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchUpsertInput' }
+            example:
+              inputs:
+                - { idProperty: email, id: hslearn+d08-1@example.com, properties: { firstname: Upserted } }
+                - { idProperty: email, id: hslearn+d08-99@example.com, properties: { firstname: Brand new } }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v3/objects/contacts/batch/archive:
+    post:
+      tags: [Contacts batch]
+      operationId: batchArchiveContacts
+      summary: Archive up to 100 contacts
+      x-plan-steps: [69]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/IdInput' } }
+            example: { inputs: [{ id: '101' }, { id: '102' }] }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  # ---------------------------------------------------------------- Companies
+  /crm/v3/objects/companies:
+    get:
+      tags: [Companies]
+      operationId: listCompanies
+      summary: List companies (one page)
+      description: Day 1 scope check for crm.objects.companies.read.
+      x-plan-steps: [6]
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/properties'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Companies]
+      operationId: createCompany
+      summary: Create a company
+      x-plan-steps: [45]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateInput' }
+            example:
+              properties: { name: HSLearn Acme, domain: acme-hslearn.example.com }
+      responses:
+        '201': { $ref: '#/components/responses/Object' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /crm/v3/objects/companies/{companyId}:
+    parameters:
+      - $ref: '#/components/parameters/companyId'
+    get:
+      tags: [Companies]
+      operationId: getCompany
+      summary: Read a company by id
+      x-plan-steps: [49]
+      parameters:
+        - $ref: '#/components/parameters/properties'
+        - $ref: '#/components/parameters/associations'
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Companies]
+      operationId: archiveCompany
+      summary: Archive (delete) a company
+      x-plan-steps: [69]
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  /crm/v3/objects/companies/search:
+    post:
+      tags: [Companies]
+      operationId: searchCompanies
+      summary: Search companies (same body as contacts search)
+      x-plan-steps: [69, 70]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+            example:
+              filterGroups:
+                - filters: [{ propertyName: name, operator: CONTAINS_TOKEN, value: HSLearn }]
+      responses:
+        '200': { $ref: '#/components/responses/SearchResults' }
+
+  /crm/v3/objects/companies/batch/create:
+    post:
+      tags: [Companies]
+      operationId: batchCreateCompanies
+      summary: Create up to 100 companies
+      x-plan-steps: [70]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/CreateInput' } }
+      responses:
+        '201': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v3/objects/companies/batch/update:
+    post:
+      tags: [Companies]
+      operationId: batchUpdateCompanies
+      summary: Update up to 100 companies by id
+      x-plan-steps: [70]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchUpdateInput' }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v3/objects/companies/batch/upsert:
+    post:
+      tags: [Companies]
+      operationId: batchUpsertCompanies
+      summary: Create or update up to 100 companies by a unique property
+      description: |
+        `idProperty` must be a property with unique values. The default `domain` property may be
+        rejected; see the mini project note in docs/03-roadmap.md.
+      x-plan-steps: [70]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchUpsertInput' }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /crm/v3/objects/companies/batch/archive:
+    post:
+      tags: [Companies]
+      operationId: batchArchiveCompanies
+      summary: Archive up to 100 companies
+      x-plan-steps: [69]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/IdInput' } }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  # ---------------------------------------------------------------- Properties
+  /crm/v3/properties/{objectType}/groups:
+    parameters:
+      - $ref: '#/components/parameters/objectType'
+    get:
+      tags: [Properties]
+      operationId: listPropertyGroups
+      summary: List property groups of an object
+      description: Day 1 scope check for crm.schemas.contacts.read.
+      x-plan-steps: [6, 13]
+      responses:
+        '200':
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { $ref: '#/components/schemas/PropertyGroup' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /crm/v3/properties/{objectType}:
+    parameters:
+      - $ref: '#/components/parameters/objectType'
+    get:
+      tags: [Properties]
+      operationId: listProperties
+      summary: List all properties of an object
+      x-plan-steps: [13]
+      parameters:
+        - $ref: '#/components/parameters/archived'
+      responses:
+        '200':
+          description: Properties
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { $ref: '#/components/schemas/Property' } }
+    post:
+      tags: [Properties]
+      operationId: createProperty
+      summary: Create a custom property
+      description: Prefix practice properties with `hsl_`. Creating an existing name gives 409.
+      x-plan-steps: [14, 15, 16, 17, 18, 19, 20, 21]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertyCreate' }
+            examples:
+              text:
+                summary: Step 14, single line text
+                value: { name: hsl_nickname, label: Nickname, type: string, fieldType: text, groupName: contactinformation }
+              number:
+                summary: Step 15, number
+                value: { name: hsl_score, label: Score, type: number, fieldType: number, groupName: contactinformation }
+              dropdown:
+                summary: Step 16, dropdown select
+                value:
+                  name: hsl_favorite_color
+                  label: Favorite color
+                  type: enumeration
+                  fieldType: select
+                  groupName: contactinformation
+                  options:
+                    - { label: Red, value: red, displayOrder: 0 }
+                    - { label: Blue, value: blue, displayOrder: 1 }
+              checkboxes:
+                summary: Step 17, multiple checkboxes
+                value:
+                  name: hsl_interests
+                  label: Interests
+                  type: enumeration
+                  fieldType: checkbox
+                  groupName: contactinformation
+                  options:
+                    - { label: API, value: api, displayOrder: 0 }
+                    - { label: CRM, value: crm, displayOrder: 1 }
+                    - { label: Sales, value: sales, displayOrder: 2 }
+              singleCheckbox:
+                summary: Step 18, single checkbox
+                value:
+                  name: hsl_newsletter
+                  label: Newsletter
+                  type: bool
+                  fieldType: booleancheckbox
+                  groupName: contactinformation
+                  options:
+                    - { label: 'Yes', value: 'true', displayOrder: 0 }
+                    - { label: 'No', value: 'false', displayOrder: 1 }
+              date:
+                summary: Step 19, date picker (joining_date)
+                value: { name: joining_date, label: Joining date, type: date, fieldType: date, groupName: contactinformation }
+              datetime:
+                summary: Step 20, date and time
+                value: { name: hsl_last_call, label: Last call, type: datetime, fieldType: date, groupName: contactinformation }
+              unique:
+                summary: Step 21, unique value
+                value: { name: hsl_employee_code, label: Employee code, type: string, fieldType: text, groupName: contactinformation, hasUniqueValue: true }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Property' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /crm/v3/properties/{objectType}/{propertyName}:
+    parameters:
+      - $ref: '#/components/parameters/objectType'
+      - $ref: '#/components/parameters/propertyName'
+    get:
+      tags: [Properties]
+      operationId: getProperty
+      summary: Read one property definition
+      x-plan-steps: [22]
+      responses:
+        '200':
+          description: Property
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Property' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Properties]
+      operationId: updateProperty
+      summary: Update a property (e.g. add a dropdown option)
+      description: Send the FULL options list. Options you leave out are removed.
+      x-plan-steps: [22]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertyUpdate' }
+            example:
+              options:
+                - { label: Red, value: red, displayOrder: 0 }
+                - { label: Blue, value: blue, displayOrder: 1 }
+                - { label: Green, value: green, displayOrder: 2 }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Property' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    delete:
+      tags: [Properties]
+      operationId: archiveProperty
+      summary: Archive a custom property (cleanup)
+      x-plan-steps: [69]
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  # ---------------------------------------------------------------- Association labels
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/labels:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+    get:
+      tags: [Association labels]
+      operationId: listAssociationTypes
+      summary: List all association types and labels between two objects
+      x-plan-steps: [46]
+      responses:
+        '200':
+          description: Types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { $ref: '#/components/schemas/AssociationType' } }
+    post:
+      tags: [Association labels]
+      operationId: createAssociationLabel
+      summary: Create a custom label (USER_DEFINED type)
+      x-plan-steps: [56, 57]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label, name]
+              properties:
+                label: { type: string, example: Decision Maker }
+                name: { type: string, example: decision_maker }
+                inverseLabel: { type: string, description: Optional label for the other direction }
+      responses:
+        '200':
+          description: Created; save the typeId
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { $ref: '#/components/schemas/AssociationType' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Association labels]
+      operationId: updateAssociationLabel
+      summary: Rename a custom label
+      x-plan-steps: [65]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [associationTypeId, label]
+              properties:
+                associationTypeId: { type: integer }
+                label: { type: string }
+            example: { associationTypeId: 1, label: Key Decision Maker }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/labels/{associationTypeId}:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+      - name: associationTypeId
+        in: path
+        required: true
+        schema: { type: integer }
+    delete:
+      tags: [Association labels]
+      operationId: deleteAssociationLabel
+      summary: Delete a custom label
+      x-plan-steps: [66]
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  # ---------------------------------------------------------------- Associations (single)
+  /crm/v4/objects/{fromObjectType}/{fromObjectId}/associations/default/{toObjectType}/{toObjectId}:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/fromObjectId'
+      - $ref: '#/components/parameters/toObjectType'
+      - $ref: '#/components/parameters/toObjectId'
+    put:
+      tags: [Associations]
+      operationId: associateDefault
+      summary: Link two records with the default (unlabeled) association
+      description: No body needed.
+      x-plan-steps: [47]
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchResponse' }
+
+  /crm/v4/objects/{fromObjectType}/{fromObjectId}/associations/{toObjectType}:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/fromObjectId'
+      - $ref: '#/components/parameters/toObjectType'
+    get:
+      tags: [Associations]
+      operationId: listAssociations
+      summary: List the records linked to one record, with their types and labels
+      x-plan-steps: [48, 49, 60]
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+      responses:
+        '200':
+          description: Linked records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/AssociationTarget' }
+                  paging: { $ref: '#/components/schemas/Paging' }
+
+  /crm/v4/objects/{fromObjectType}/{fromObjectId}/associations/{toObjectType}/{toObjectId}:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/fromObjectId'
+      - $ref: '#/components/parameters/toObjectType'
+      - $ref: '#/components/parameters/toObjectId'
+    put:
+      tags: [Associations]
+      operationId: associateWithLabels
+      summary: Link two records with one or more labels (replaces nothing, adds types)
+      x-plan-steps: [58, 59]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/AssociationSpec' }
+            example:
+              - { associationCategory: USER_DEFINED, associationTypeId: 1 }
+              - { associationCategory: USER_DEFINED, associationTypeId: 3 }
+      responses:
+        '200':
+          description: Linked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fromObjectTypeId: { type: string }
+                  fromObjectId: { type: integer }
+                  toObjectTypeId: { type: string }
+                  toObjectId: { type: integer }
+                  labels: { type: array, items: { type: string } }
+        '201':
+          description: Linked
+        '400': { $ref: '#/components/responses/BadRequest' }
+    delete:
+      tags: [Associations]
+      operationId: removeAllAssociations
+      summary: Remove every association (all types) between two records
+      x-plan-steps: [51]
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  # ---------------------------------------------------------------- Associations (batch)
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/batch/associate/default:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+    post:
+      tags: [Associations]
+      operationId: batchAssociateDefault
+      summary: Link many pairs with the default association
+      x-plan-steps: [54]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs:
+                  type: array
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/FromTo' }
+            example:
+              inputs:
+                - { from: { id: '101' }, to: { id: '900' } }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/batch/create:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+    post:
+      tags: [Associations]
+      operationId: batchAssociateWithLabels
+      summary: Link many pairs with specific labels
+      x-plan-steps: [61, 70]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchFromToTypes' }
+            example:
+              inputs:
+                - from: { id: '101' }
+                  to: { id: '900' }
+                  types: [{ associationCategory: USER_DEFINED, associationTypeId: 1 }]
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '201': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/batch/read:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+    post:
+      tags: [Associations]
+      operationId: batchReadAssociations
+      summary: Read the associations of many records at once
+      x-plan-steps: [62]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/IdInput' } }
+            example: { inputs: [{ id: '101' }, { id: '102' }] }
+      responses:
+        '200': { $ref: '#/components/responses/BatchResult' }
+        '207': { $ref: '#/components/responses/BatchResult' }
+
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/batch/labels/archive:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+    post:
+      tags: [Associations]
+      operationId: batchRemoveLabels
+      summary: Remove specific labels only; the link and other labels stay
+      x-plan-steps: [63]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchFromToTypes' }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+  /crm/v4/associations/{fromObjectType}/{toObjectType}/batch/archive:
+    parameters:
+      - $ref: '#/components/parameters/fromObjectType'
+      - $ref: '#/components/parameters/toObjectType'
+    post:
+      tags: [Associations]
+      operationId: batchRemoveAllAssociations
+      summary: Remove every association between many pairs
+      x-plan-steps: [69]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inputs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      from: { $ref: '#/components/schemas/IdInput' }
+                      to: { type: array, items: { $ref: '#/components/schemas/IdInput' } }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Private app access token (pat-...). Paste only the token, not the word Bearer.
+
+  parameters:
+    contactId:
+      name: contactId
+      in: path
+      required: true
+      description: Record id, or the email when idProperty=email
+      schema: { type: string, example: '101' }
+    companyId:
+      name: companyId
+      in: path
+      required: true
+      schema: { type: string, example: '900' }
+    objectType:
+      name: objectType
+      in: path
+      required: true
+      schema: { type: string, enum: [contacts, companies, deals, tickets], default: contacts }
+    propertyName:
+      name: propertyName
+      in: path
+      required: true
+      description: Internal name, not the label
+      schema: { type: string, example: hsl_favorite_color }
+    fromObjectType:
+      name: fromObjectType
+      in: path
+      required: true
+      schema: { type: string, enum: [contacts, companies, deals, tickets], default: contacts }
+    toObjectType:
+      name: toObjectType
+      in: path
+      required: true
+      schema: { type: string, enum: [contacts, companies, deals, tickets], default: companies }
+    fromObjectId:
+      name: fromObjectId
+      in: path
+      required: true
+      schema: { type: string, example: '101' }
+    toObjectId:
+      name: toObjectId
+      in: path
+      required: true
+      schema: { type: string, example: '900' }
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 10, maximum: 100 }
+    after:
+      name: after
+      in: query
+      description: Paging cursor from `paging.next.after` of the previous page
+      schema: { type: string }
+    properties:
+      name: properties
+      in: query
+      description: Comma separated internal names to return
+      schema: { type: string, example: 'email,firstname,phone' }
+    associations:
+      name: associations
+      in: query
+      description: Object types whose linked ids to include
+      schema: { type: string, example: companies }
+    idProperty:
+      name: idProperty
+      in: query
+      description: Use a unique property (e.g. email) instead of the record id
+      schema: { type: string, example: email }
+    archived:
+      name: archived
+      in: query
+      description: true = only archived (recycle bin) records
+      schema: { type: boolean, default: false }
+
+  responses:
+    Object:
+      description: One record
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SimplePublicObject' }
+    ObjectPage:
+      description: One page of records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              results: { type: array, items: { $ref: '#/components/schemas/SimplePublicObject' } }
+              paging: { $ref: '#/components/schemas/Paging' }
+    SearchResults:
+      description: Search results
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              total: { type: integer }
+              results: { type: array, items: { $ref: '#/components/schemas/SimplePublicObject' } }
+              paging: { $ref: '#/components/schemas/Paging' }
+    BatchResult:
+      description: Batch result; with 207, read `errors` for the failed items
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/BatchResponse' }
+    NoContent:
+      description: Done, no body
+    BadRequest:
+      description: Invalid input (wrong property, invalid option, over 100 inputs)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Token missing or wrong
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Token valid but missing a scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No record with that id (or it is archived)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Already exists; for contacts the message contains `Existing ID`
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests. Wait `Retry-After` seconds if sent, else back off 1, 2, 4 s
+      headers:
+        Retry-After:
+          schema: { type: integer }
+        X-HubSpot-RateLimit-Remaining:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    PropertyValues:
+      type: object
+      description: Internal property name to value. Values are strings in responses.
+      additionalProperties: { type: string }
+      example: { email: hslearn+d02-1@example.com, firstname: Test }
+    PropertiesInput:
+      type: object
+      required: [properties]
+      properties:
+        properties: { $ref: '#/components/schemas/PropertyValues' }
+    CreateInput:
+      type: object
+      required: [properties]
+      properties:
+        properties: { $ref: '#/components/schemas/PropertyValues' }
+        associations:
+          type: array
+          items:
+            type: object
+            properties:
+              to: { $ref: '#/components/schemas/IdInput' }
+              types: { type: array, items: { $ref: '#/components/schemas/AssociationSpec' } }
+    IdInput:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    BatchUpdateInput:
+      type: object
+      properties:
+        inputs:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [id, properties]
+            properties:
+              id: { type: string }
+              idProperty: { type: string }
+              properties: { $ref: '#/components/schemas/PropertyValues' }
+    BatchUpsertInput:
+      type: object
+      properties:
+        inputs:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [id, idProperty, properties]
+            properties:
+              id: { type: string, description: 'Value of the unique property, e.g. the email' }
+              idProperty: { type: string, example: email }
+              properties: { $ref: '#/components/schemas/PropertyValues' }
+    SimplePublicObject:
+      type: object
+      properties:
+        id: { type: string, example: '101' }
+        properties: { $ref: '#/components/schemas/PropertyValues' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        archived: { type: boolean }
+        new: { type: boolean, description: Upsert only; true when the record was created }
+        associations:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    type: { type: string, example: contact_to_company }
+    Paging:
+      type: object
+      properties:
+        next:
+          type: object
+          properties:
+            after: { type: string }
+            link: { type: string }
+    BatchResponse:
+      type: object
+      properties:
+        status: { type: string, example: COMPLETE }
+        results: { type: array, items: { type: object } }
+        errors:
+          type: array
+          items: { $ref: '#/components/schemas/Error' }
+        numErrors: { type: integer }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+    Error:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        message: { type: string, example: 'Contact already exists. Existing ID: 101' }
+        category: { type: string, example: CONFLICT }
+        correlationId: { type: string }
+        context: { type: object }
+        errors: { type: array, items: { type: object } }
+    Filter:
+      type: object
+      required: [propertyName, operator]
+      properties:
+        propertyName: { type: string, example: email }
+        operator:
+          type: string
+          enum: [EQ, NEQ, LT, LTE, GT, GTE, BETWEEN, IN, NOT_IN, HAS_PROPERTY, NOT_HAS_PROPERTY, CONTAINS_TOKEN, NOT_CONTAINS_TOKEN]
+        value: { type: string }
+        highValue: { type: string, description: Upper bound for BETWEEN }
+        values: { type: array, items: { type: string }, description: For IN / NOT_IN }
+    SearchRequest:
+      type: object
+      properties:
+        filterGroups:
+          type: array
+          maxItems: 5
+          description: Groups are OR'ed
+          items:
+            type: object
+            properties:
+              filters:
+                type: array
+                maxItems: 6
+                description: Filters inside a group are AND'ed
+                items: { $ref: '#/components/schemas/Filter' }
+        sorts:
+          type: array
+          items:
+            type: object
+            properties:
+              propertyName: { type: string }
+              direction: { type: string, enum: [ASCENDING, DESCENDING] }
+        properties: { type: array, items: { type: string } }
+        limit: { type: integer, maximum: 200 }
+        after: { type: string }
+        query: { type: string, description: Free text search over default text properties }
+    Option:
+      type: object
+      required: [label, value]
+      properties:
+        label: { type: string, description: Shown in the UI }
+        value: { type: string, description: Stored and sent through the API }
+        displayOrder: { type: integer }
+        hidden: { type: boolean }
+    PropertyCreate:
+      type: object
+      required: [name, label, type, fieldType, groupName]
+      properties:
+        name: { type: string, description: Internal name (lowercase, underscores) }
+        label: { type: string }
+        type: { type: string, enum: [string, number, enumeration, bool, date, datetime] }
+        fieldType: { type: string, enum: [text, textarea, number, select, radio, checkbox, booleancheckbox, date] }
+        groupName: { type: string, example: contactinformation }
+        description: { type: string }
+        options: { type: array, items: { $ref: '#/components/schemas/Option' } }
+        hasUniqueValue: { type: boolean }
+        formField: { type: boolean }
+    PropertyUpdate:
+      type: object
+      properties:
+        label: { type: string }
+        description: { type: string }
+        groupName: { type: string }
+        options: { type: array, items: { $ref: '#/components/schemas/Option' } }
+    Property:
+      allOf:
+        - $ref: '#/components/schemas/PropertyCreate'
+        - type: object
+          properties:
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            hubspotDefined: { type: boolean }
+            archived: { type: boolean }
+    PropertyGroup:
+      type: object
+      properties:
+        name: { type: string, example: contactinformation }
+        label: { type: string, example: Contact information }
+        displayOrder: { type: integer }
+        archived: { type: boolean }
+    AssociationSpec:
+      type: object
+      required: [associationCategory, associationTypeId]
+      properties:
+        associationCategory: { type: string, enum: [HUBSPOT_DEFINED, USER_DEFINED, INTEGRATOR_DEFINED] }
+        associationTypeId: { type: integer, example: 279 }
+    AssociationType:
+      type: object
+      properties:
+        category: { type: string, example: HUBSPOT_DEFINED }
+        typeId: { type: integer, example: 279 }
+        label: { type: string, nullable: true, example: Decision Maker }
+    AssociationTarget:
+      type: object
+      properties:
+        toObjectId: { type: integer, example: 900 }
+        associationTypes:
+          type: array
+          items: { $ref: '#/components/schemas/AssociationType' }
+    FromTo:
+      type: object
+      required: [from, to]
+      properties:
+        from: { $ref: '#/components/schemas/IdInput' }
+        to: { $ref: '#/components/schemas/IdInput' }
+    BatchFromToTypes:
+      type: object
+      properties:
+        inputs:
+          type: array
+          maxItems: 100
+          items:
+            allOf:
+              - $ref: '#/components/schemas/FromTo'
+              - type: object
+                properties:
+                  types: { type: array, items: { $ref: '#/components/schemas/AssociationSpec' } }
