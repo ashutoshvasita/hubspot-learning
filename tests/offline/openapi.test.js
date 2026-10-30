@@ -44,6 +44,15 @@ test('every operation has a unique operationId, summary, known tag, responses an
   }
 });
 
+test('every API row of the workbook (1 to 70) is covered by some x-plan-steps', () => {
+  // Rows that are not API calls: concepts, UI, setup (1-5), reading docs (44, 55), script (67)
+  const NOT_API = new Set([1, 2, 3, 4, 5, 44, 55, 67]);
+  const covered = new Set(operations.flatMap(({ op }) => op['x-plan-steps']));
+  const missing = [];
+  for (let row = 1; row <= 70; row++) if (!NOT_API.has(row) && !covered.has(row)) missing.push(row);
+  assert.deepEqual(missing, [], 'add these workbook rows to x-plan-steps in api/openapi.yaml');
+});
+
 test('every {param} in a path is declared as a path parameter', () => {
   for (const { method, path, op } of operations) {
     const declared = [...(spec.paths[path].parameters ?? []), ...(op.parameters ?? [])]
