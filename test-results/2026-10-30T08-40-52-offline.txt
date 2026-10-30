@@ -1,0 +1,21 @@
+✔ spec is OpenAPI 3 with info, servers and bearer auth (0.636493ms)
+✔ every $ref points to something that exists (1.240347ms)
+✔ every operation has a unique operationId, summary, known tag, responses and plan steps (0.324097ms)
+✔ every API row of the workbook (1 to 70) is covered by some x-plan-steps (0.124823ms)
+✔ every {param} in a path is declared as a path parameter (0.380234ms)
+✔ there is at least one lesson request file (0.587383ms)
+✔ requests/01-setup.http: every request is documented in api/openapi.yaml (1.006057ms)
+✔ requests/01-setup.http: never contains a real token (0.249602ms)
+✔ requests/02-crud.http: every request is documented in api/openapi.yaml (0.186014ms)
+✔ requests/02-crud.http: never contains a real token (0.162942ms)
+✔ docs/03-roadmap.md: every endpoint is documented in api/openapi.yaml (1.745632ms)
+✔ README.md links every request file, live test, doc and note (0.353057ms)
+✔ every lesson request file has a matching live test (0.19707ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 206.246046

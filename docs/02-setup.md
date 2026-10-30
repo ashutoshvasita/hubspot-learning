@@ -20,8 +20,9 @@ hard to clean up). This page is the setup that avoids those problems.
 
 ### 3. Developer account and Developer Test Account (UI)
 1. Go to https://developers.hubspot.com and create a free developer account.
-2. In the developer account, open **Test accounts** (left menu, may be under "Development") and click **Create developer test account**.
-3. Open the test account. Write its Hub ID in `notes/day01.md`.
+2. Open **Development > Testing > Test Accounts** and click **Create developer test account**.
+3. Click the new account's name to open it. Check the URL now contains the **test account's** ID
+   (shown under its name in the list), not your main account's ID. Write the Hub ID in `notes/day01.md`.
 
 ### 4. Tooling
 1. Install VS Code extension **REST Client** (publisher: Huachao Mao).
